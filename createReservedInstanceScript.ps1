@@ -49,27 +49,40 @@ for ( $rowN = 2; $rowN -le $totalNoOfRecords; $rowN++ ) {
     $ret = Invoke-Expression $scriptLine
 
     if (!$ret) {
-        Write-Host "Error script failed"
+        Write-Host "Error calculate script failed"
     }
     else {
 
         # script succeeded, convert the result object into JSON
-        $retJson = ConvertFrom-Json $ret
+        # result object is an array of strings that are JSON when concatenated back together..
+
+        $retJson = ConvertFrom-Json([string]::Concat($ret))
         
-        Write-Host $retJson.reservationOrderId
+        Write-Host "Order Id $($retJson.properties.reservationOrderId)"
 
         ###
         # Purchase the reservation order
         ###
 
         if ($($row.Scope) -eq "Single") {
-            $scriptLine2 = 'az reservations reservation-order purchase --reservation-order-id $($retJson.reservationOrderId) --sku $($row.Sku) --location $($row.AzureRegion) --reserved-resource-type $($row.ResourceType) --billing-scope $($row.BillingSubscriptionId) --term $($row.Term) --billing-plan $($row.Plan) --quantity $($row.Quantity) --applied-scope-type $($row.Scope) --applied-scope $($row.SingleScopeSubscriptionId) --display-name $($row.ReservationName)'
+            $scriptLine2 = "az reservations reservation-order purchase --reservation-order-id $($retJson.properties.reservationOrderId) --sku $($row.Sku) --location $($row.AzureRegion) --reserved-resource-type $($row.ResourceType) --billing-scope $($row.BillingSubscriptionId) --term $($row.Term) --billing-plan $($row.Plan) --quantity $($row.Quantity) --applied-scope-type $($row.Scope) --applied-scope $($row.SingleScopeSubscriptionId) --display-name $($row.ReservationName)"
         }
         else {
-            $scriptLine2 = 'az reservations reservation-order purchase --reservation-order-id $($retJson.reservationOrderId) --sku $($row.Sku) --location $($row.AzureRegion) --reserved-resource-type $($row.ResourceType) --billing-scope $($row.BillingSubscriptionId) --term $($row.Term) --billing-plan $($row.Plan) --quantity $($row.Quantity) --applied-scope-type $($row.Scope) --display-name $($row.ReservationName)'
+            $scriptLine2 = "az reservations reservation-order purchase --reservation-order-id $($retJson.properties.reservationOrderId) --sku $($row.Sku) --location $($row.AzureRegion) --reserved-resource-type $($row.ResourceType) --billing-scope $($row.BillingSubscriptionId) --term $($row.Term) --billing-plan $($row.Plan) --quantity $($row.Quantity) --applied-scope-type $($row.Scope) --display-name $($row.ReservationName)"
         }
 
         Write-Host $scriptLine2
+
+        $ret = Invoke-Expression $scriptLine2
+
+        if (!$ret) {
+            Write-Host "Error purchase script failed"
+        }
+        else {
+            $retJson = ConvertFrom-Json([string]::Concat($ret))
+
+            Write-Host "Purchase script returned $ret)"
+        }
     }
 }
 
